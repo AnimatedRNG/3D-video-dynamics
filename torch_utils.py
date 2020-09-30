@@ -1,21 +1,26 @@
 import torch
+import numpy as np
 
 float_t = torch.float32
 
-def tf(arr, dtype=float_t, torch_device='cuda'):
+
+def tf(arr, dtype=float_t, torch_device="cuda"):
     return torch.tensor(arr, dtype=dtype, device=torch_device)
 
-def tz(dims, dtype=float_t, torch_device='cuda'):
+
+def tz(dims, dtype=float_t, torch_device="cuda"):
     return torch.zeros(dims, dtype=dtype, device=torch_device)
 
 
-def trand(dims, dtype=float_t, torch_device='cuda'):
+def trand(dims, dtype=float_t, torch_device="cuda"):
     return torch.rand(dims, dtype=dtype, device=torch_device)
+
 
 def normalize(a):
     return a / torch.norm(a, p=2, dim=-1)
 
-def look_at(eye, center, up, torch_device='cuda'):
+
+def look_at(eye, center, up, torch_device="cuda"):
     n = normalize(eye - center)
     u = normalize(torch.cross(up, n, dim=-1))
     v = torch.cross(n, u)
@@ -33,30 +38,54 @@ def look_at(eye, center, up, torch_device='cuda'):
 
     return out
 
-def projection_gen(proj_matrix, view_matrix, width, height, torch_device='cuda'):
-    '''
+
+def projection_gen(proj_matrix, view_matrix, width, height, torch_device="cuda"):
+    """
     generates matrix that has ray positions on the near plane and their directions
-    '''
-    rays = torch.zeros((2, height, width, 3),
-                       dtype=float_t, device=torch_device)
-    inv = torch.inverse(proj_matrix.cpu() @ view_matrix.cpu()).to(
-        device=torch_device)
-    origin = (torch.inverse(view_matrix.cpu()).to(device=torch_device) @ torch.tensor(
-        (0.0, 0.0, 0.0, 1.0), dtype=float_t, device=torch_device))[:3]
+    """
+    rays = torch.zeros((2, height, width, 3), dtype=float_t, device=torch_device)
+    inv = torch.inverse(proj_matrix.cpu() @ view_matrix.cpu()).to(device=torch_device)
+    origin = (
+        torch.inverse(view_matrix.cpu()).to(device=torch_device)
+        @ torch.tensor((0.0, 0.0, 0.0, 1.0), dtype=float_t, device=torch_device)
+    )[:3]
     near = 0.1
-    grid = torch.meshgrid(torch.linspace(-1.0, 1.0, height, dtype=float_t, device=torch_device),
-                          torch.linspace(-1.0, 1.0, width, dtype=float_t, device=torch_device))
+    grid = torch.meshgrid(
+        torch.linspace(-1.0, 1.0, height, dtype=float_t, device=torch_device),
+        torch.linspace(-1.0, 1.0, width, dtype=float_t, device=torch_device),
+    )
     clip_space = torch.stack(
-        (grid[0], grid[1],
-         torch.ones((height, width), dtype=float_t, device=torch_device),
-         torch.ones((height, width), dtype=float_t, device=torch_device)), dim=-1)
+        (
+            grid[0],
+            grid[1],
+            torch.ones((height, width), dtype=float_t, device=torch_device),
+            torch.ones((height, width), dtype=float_t, device=torch_device),
+        ),
+        dim=-1,
+    )
     tmp = torch.matmul(inv, clip_space.view(height, width, 4, 1)).squeeze()
     tmp = tmp / tmp[:, :, 3:]
     tmp = tmp[:, :, :3]
-    tmp = tmp - torch.tensor((origin[0], origin[1], origin[2]),
-                             dtype=float_t, device=torch_device)
+    tmp = tmp - torch.tensor(
+        (origin[0], origin[1], origin[2]), dtype=float_t, device=torch_device
+    )
     ray_vec = tmp / torch.norm(tmp, p=2, dim=2).unsqueeze(-1)
     rays[0, :, :] = origin + ray_vec * near
     rays[1, :, :] = ray_vec
 
     return rays, origin
+
+def positional_encoding(x, L=10):
+    assert len(x.shape) == 2
+
+    ls = torch.floor(
+        torch.arange(0, L, step=0.5, dtype=x.dtype, device=x.device)
+    ).repeat(x.shape + (1,))
+    gamma = torch.zeros_like(ls, dtype=x.dtype, device=x.device)
+
+    gamma[:, :, ::2] = torch.sin(torch.pow(2, ls[:, :, ::2]) * np.pi * x.unsqueeze(-1))
+    gamma[:, :, 1::2] = torch.cos(
+        torch.pow(2, ls[:, :, 1::2]) * np.pi * x.unsqueeze(-1)
+    )
+
+    return gamma

@@ -9,7 +9,7 @@ class PointDataset(Dataset):
         self.normals = normals
 
     def __getitem__(self, idx: int):
-        return self.pc[idx, :3], normals[idx]
+        return self.pc[idx, :3], self.normals[idx]
 
     def __len__(self):
         return self.pc.shape[0]

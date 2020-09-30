@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.neighbors import NearestNeighbors, KDTree
 import torch
 
-'''
+"""
 If we can compute the normals of the LIDAR point cloud, we can use
 them during the SIREN fitting process. The normals represent the
 gradient of the signed distance function, so a point cloud with
@@ -26,7 +26,7 @@ ring and then find `k` nearest neighbors on the rings above and
 below. Instead of using a 3D K-D tree, we use a 2D K-D tree, ignoring
 the z-component. (TODO: Add explanation for why 2D is probably
 sufficient)
-'''
+"""
 
 def get_neighbors_naive(pc, n_neighbors=5, max_similarity_dist=1):
     """
@@ -150,7 +150,7 @@ def get_neighbors_rings(pc, k=3):
     return indices
 
 
-def compute_normals(pc, ego, use_rings=True):
+def compute_normals(pc, ego, use_rings=True, is_2D=False):
     """
     Computes normals for a point cloud given that we know ego. This function
     flips normals that are facing the wrong way.
@@ -189,9 +189,11 @@ def compute_normals(pc, ego, use_rings=True):
     # subtract out centroid, transpose from `[BS, N, 3]` to `[BS, 3, N]`
     pc_neighbors = (pc_neighbors - pc_cpu[:, :3].unsqueeze(1)).transpose(1, 2)
 
+    slice_dim = 1 if is_2D else -1
+
     # pick singular vector corresponding to least singular value -- hopefully
     # a good approximation of the normal?
-    normals = torch.svd(pc_neighbors)[0].transpose(1, 2)[:, -1, :]
+    normals = torch.svd(pc_neighbors)[0].transpose(1, 2)[:, slice_dim, :]
 
     # find the normals that are flipped relative to the vector from ego
     flip = torch.bmm(normals.unsqueeze(1), (pc_cpu[:, :3] - ego_cpu).unsqueeze(-1))

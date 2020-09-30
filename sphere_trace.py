@@ -3,6 +3,7 @@ import torch.nn as nn
 import numpy as np
 from torch_utils import *
 
+
 class SphereTracerFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, sdf_model, ray_matrix, iterations, *args):
@@ -114,6 +115,7 @@ class SphereTracer(nn.Module):
 
 def render(sdf_model):
     import matplotlib.pyplot as plt
+
     torch_device = "cuda"
 
     projection = tf(
@@ -145,6 +147,6 @@ def render(sdf_model):
     render = render.detach().cpu().numpy()
 
     # plt.imshow(render * 255, cmap='gray', vmin=0, vmax=255)
-    # plt.imshow(render)
-    plt.imshow(render, cmap="gray")
+    plt.imshow(render)
+    #plt.imshow(render, cmap="gray")
     plt.show()
