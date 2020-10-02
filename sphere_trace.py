@@ -113,7 +113,7 @@ class SphereTracer(nn.Module):
         )
 
 
-def render(sdf_model):
+def render(sdf_model, ego):
     import matplotlib.pyplot as plt
 
     torch_device = "cuda"
@@ -127,8 +127,10 @@ def render(sdf_model):
         ]
     )
 
+    #ego = tf([0.0, 0.0, 8.0])
+
     view = look_at(
-        tf([0.0, 0.0, 8.0]), tf([0.0, 0.0, 0.0]), tf([0.0, 1.0, 0.0]), torch_device
+        ego, tf([0.0, 0.0, 0.0]), tf([0.0, 1.0, 0.0]), torch_device
     )
 
     ray_matrix = projection_gen(projection, view, 512, 512)[0].unsqueeze(0)
